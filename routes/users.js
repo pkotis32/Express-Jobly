@@ -97,7 +97,8 @@ router.patch("/:username", ensureLoggedIn, async function (req, res, next) {
     }
 
     const user = await User.update(req.params.username, req.body);
-    return res.json({ user });
+    let token = createToken(user)
+    return res.json({ user, token });
   } catch (err) {
     return next(err);
   }
