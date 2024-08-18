@@ -4,6 +4,7 @@ const db = require("../db");
 const { BadRequestError, NotFoundError } = require("../expressError");
 const { sqlForPartialUpdate } = require("../helpers/sql");
 
+
 /** Related functions for companies. */
 
 class Company {
@@ -47,19 +48,71 @@ class Company {
   /** Find all companies.
    *
    * Returns [{ handle, name, description, numEmployees, logoUrl }, ...]
+   * 
+   * can add option query parameters: {q, minEmployees, maxEmployees}
    * */
 
-  static async findAll() {
-    const companiesRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
-           ORDER BY name`);
-    return companiesRes.rows;
+  static async findAll(q = {}) {
+
+    // starting template for query 
+    let query = 
+      `SELECT 
+          handle,
+          name,
+          description,
+          num_employees AS "numEmployees",
+          logo_url AS "logoUrl"
+      FROM companies`
+
+    let whereExpression = []
+    let values = []
+    
+    // extract query params
+    let name = q.q
+    let minEmployees = q.minEmployees
+    let maxEmployees = q.maxEmployees
+
+    // throw error if min employees is greater than max employees
+    if (minEmployees > maxEmployees) {
+      throw new BadRequestError('min cannot be greater than max employees')
+    }
+
+    // if minEmployess exists, add its value and query 
+    if (minEmployees !== undefined) {
+      values.push(minEmployees)
+      let exp = `num_employees >= $${values.length}`
+      whereExpression.push(exp)
+    }
+    // if maxEmployees exists, and its value and query
+    if (maxEmployees !== undefined) {
+      values.push(maxEmployees)
+      let exp = `num_employees <= $${values.length}`
+      whereExpression.push(exp) 
+    }
+    // if name exists, add its query and value
+    if (name !== undefined) {
+      values.push(`%${name}%`)
+      let exp =  `name ILIKE $${values.length}`
+      whereExpression.push(exp)
+    }
+
+    // complete the query by adding full where clause and adding order by at the end
+    if (whereExpression.length > 0) {
+      query += ' WHERE ' + whereExpression.join(' AND ') + ' ORDER BY name'
+    }
+
+    // execute query
+    const result = await db.query(query, values)
+
+    let companies = result.rows
+    return companies
+
+
+  
   }
+
+
+
 
   /** Given a company handle, return data about company.
    *
@@ -71,20 +124,44 @@ class Company {
 
   static async get(handle) {
     const companyRes = await db.query(
-          `SELECT handle,
-                  name,
-                  description,
-                  num_employees AS "numEmployees",
-                  logo_url AS "logoUrl"
-           FROM companies
+          `SELECT c.handle,
+                  c.name,
+                  c.description,
+                  c.num_employees AS "numEmployees",
+                  c.logo_url AS "logoUrl",
+                  j.id,
+                  j.title,
+                  j.salary,
+                  j.equity,
+                  j.company_handle AS "companyHandle"
+           FROM companies AS c
+           LEFT JOIN jobs AS j ON c.handle = j.company_handle
            WHERE handle = $1`,
         [handle]);
 
-    const company = companyRes.rows[0];
+    if (!companyRes.rows[0]) throw new NotFoundError(`No company: ${handle}`);
 
-    if (!company) throw new NotFoundError(`No company: ${handle}`);
+    const {name, description, numEmployees, logoUrl} = companyRes.rows[0]
+    
+    let jobs = companyRes.rows.map(r => {
+      if (r.id === null) {
+        return 
+      }
+      return {
+        id: r.id,
+        title: r.title,
+        salary: r.salary,
+        equity: r.equity,
+        companyHandle: r.companyHandle
+      }
+    })
+    
+    if (jobs[0] === undefined) {
+      jobs = []
+    }
 
-    return company;
+    let company = {handle, name, description, numEmployees, logoUrl, jobs}
+    return company
   }
 
   /** Update company data with `data`.
@@ -140,7 +217,12 @@ class Company {
 
     if (!company) throw new NotFoundError(`No company: ${handle}`);
   }
+
+
+
 }
+
+
 
 
 module.exports = Company;

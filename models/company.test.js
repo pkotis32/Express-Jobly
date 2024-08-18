@@ -85,6 +85,28 @@ describe("findAll", function () {
       },
     ]);
   });
+
+
+  test('works: with filter', async function() {
+  
+      let query = {q: 'C1', minEmployees: 0, maxEmployees: 1}
+      let companies = await Company.findAll(query)
+      expect(companies).toEqual([{
+        handle: 'c1',
+        name: 'C1', 
+        description: 'Desc1',
+        logoUrl: 'http://c1.img',
+        numEmployees: 1
+      }])
+  })
+
+  test('does not work: min greater than max', function() {
+
+    let query = {q: 'C1', minEmployees: 3, maxEmployees: 1}
+    expect(async () => {
+      await Company.findAll(query).toThrow('min cannot be greater than max employees')
+    })
+  })
 });
 
 /************************************** get */
@@ -98,6 +120,15 @@ describe("get", function () {
       description: "Desc1",
       numEmployees: 1,
       logoUrl: "http://c1.img",
+      jobs: [
+        {
+          id: 1,
+          title: 'dentist',
+          salary: 150000,
+          equity: '0.5',
+          companyHandle: 'c1'
+        }
+      ]
     });
   });
 
