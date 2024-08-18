@@ -160,7 +160,7 @@ describe("GET /companies/:handle", function () {
 
 describe("PATCH /companies/:handle", function () {
   // make sure works for admin users
-  test("works for users", async function () {
+  test("works for admin users", async function () {
     const resp = await request(app)
         .patch(`/companies/c1`)
         .send({
