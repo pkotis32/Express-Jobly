@@ -12,6 +12,7 @@ const {
   commonAfterEach,
   commonAfterAll,
   u1Token,
+  u2AdminToken,
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -212,6 +213,7 @@ describe("PATCH /users/:username", () => {
         email: "user1@user.com",
         isAdmin: false,
       },
+      token: u1Token
     });
   });
 
@@ -259,6 +261,7 @@ describe("PATCH /users/:username", () => {
         email: "user1@user.com",
         isAdmin: false,
       },
+      token: u1Token
     });
     const isSuccessful = await User.authenticate("u1", "new-password");
     expect(isSuccessful).toBeTruthy();
@@ -288,3 +291,32 @@ describe("DELETE /users/:username", function () {
     expect(resp.statusCode).toEqual(404);
   });
 });
+
+
+describe('POST /users/:username/jobs/:jobId', function() {
+  test('works for admin', async function() {
+
+    const resp = await request(app).post('/users/u3/jobs/1').set('authorization', `Bearer ${u2AdminToken}`)
+    expect(resp.statusCode).toEqual(200)
+    expect(resp.body).toEqual({jobs: [1]})
+  })
+
+  test('works for correct user', async function() {
+
+    const resp = await request(app).post('/users/u1/jobs/1').set('authorization', `Bearer ${u1Token}`)
+    expect(resp.statusCode).toEqual(200)
+    expect(resp.body).toEqual({jobs: [1]})
+  })
+
+  test('unauthorized for non admin or non logged in user', async function() {
+
+    const resp = await request(app).post('/users/u10/jobs/10')
+    expect(resp.statusCode).toEqual(401)
+  })
+
+  test('job or username not found', async function() {
+
+    const resp = await request(app).post('/users/u10/jobs/5').set('authorization', `Bearer ${u2AdminToken}`)
+    expect(resp.statusCode).toEqual(404)
+  })
+})

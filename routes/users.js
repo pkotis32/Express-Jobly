@@ -6,6 +6,7 @@ const jsonschema = require("jsonschema");
 
 const express = require("express");
 const { ensureLoggedIn } = require("../middleware/auth");
+const {ensureCorrectUserOrAdmin} = require('../middleware/auth')
 const { BadRequestError } = require("../expressError");
 const User = require("../models/user");
 const { createToken } = require("../helpers/tokens");
@@ -118,6 +119,27 @@ router.delete("/:username", ensureLoggedIn, async function (req, res, next) {
     return next(err);
   }
 });
+
+
+
+/**
+ * POST /users/[username]/jobs[jobId] => {jobs: [jobId...,]}
+ * 
+ * authorization: correct user or admin
+ */
+
+
+router.post('/:username/jobs/:jobId', ensureCorrectUserOrAdmin, async (req, res, next) => {
+  try {
+    const {username, jobId} = req.params
+    let jobs = await User.applyJob(username, jobId)
+    
+    return res.json({jobs: jobs})
+  } catch (error) {
+    return next(error)
+  }
+  
+})
 
 
 module.exports = router;

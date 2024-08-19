@@ -5,6 +5,7 @@ const { UnauthorizedError } = require("../expressError");
 const {
   authenticateJWT,
   ensureLoggedIn,
+  ensureAdmin
 } = require("./auth");
 
 
@@ -61,7 +62,7 @@ describe("ensureLoggedIn", function () {
   test("works", function () {
     expect.assertions(1);
     const req = {};
-    const res = { locals: { user: { username: "test", is_admin: false } } };
+    const res = { locals: { user: { username: "test", isAdmin: false } } };
     const next = function (err) {
       expect(err).toBeFalsy();
     };
@@ -78,3 +79,26 @@ describe("ensureLoggedIn", function () {
     ensureLoggedIn(req, res, next);
   });
 });
+
+
+
+// test whether ensure admin middleware works as expected
+describe('ensureAdmin', function() {
+  test('works', function() {
+    const req = {}
+    const res = { locals: { user: { username: "testAdmin", isAdmin: true } } };
+    const next = function (err) {
+      expect(err instanceof UnauthorizedError).toBeFalsy()
+    }
+    ensureAdmin(req, res, next);
+  })
+
+  test('unauthorized if not logged in', function() {
+    const req = {}
+    const res = {locals: {}}
+    const next = function (err) {
+      expect(err instanceof UnauthorizedError).toBeTruthy()
+    }
+    ensureAdmin(req, res, next)
+  })
+})
