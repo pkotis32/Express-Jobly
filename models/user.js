@@ -204,7 +204,38 @@ class User {
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
   }
+
+
+  /**
+ * allow user to apply for a job
+ * 
+ * should save the user id with the job id to the applications model in the database
+ * 
+ * should throw NotFoundError if job or user is not found
+ */
+
+
+static async applyJob(username, jobId) {
+
+  
+  const {rows: [user]} = await db.query('SELECT * FROM users WHERE username = $1', [username])
+  const {rows: [job]} = await db.query('SELECT * FROM jobs WHERE id = $1', [jobId])
+
+  if (!user || !job) {
+    throw new NotFoundError('user or job not found')
+  }
+
+  const result = await db.query('INSERT INTO applications (username, job_id) VALUES ($1, $2) RETURNING job_id AS "jobId", username', [username, jobId])
+
+  const {rows: jobs} = await db.query('SELECT j.id FROM users AS u JOIN applications AS a ON u.username = a.username JOIN jobs AS j ON a.job_id = j.id WHERE u.username = $1', [username])
+
+  let jobIds = jobs.map(r => r.id)
+  return jobIds
 }
+}
+
+
+
 
 
 module.exports = User;

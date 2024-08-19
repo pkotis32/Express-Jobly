@@ -228,3 +228,33 @@ describe("remove", function () {
     }
   });
 });
+
+
+
+describe('apply job', function() {
+  test('works', async function() {
+    let jobs = await User.applyJob('u1', 1)
+    expect(jobs).toEqual([1])
+
+    const result = await db.query('SELECT * FROM applications WHERE username = $1 AND job_id = $2', ['u1', 1])
+    expect(result.rows.length).toEqual(1)
+  })
+
+  test('job not found', async function() {
+
+    try {
+      await User.applyJob('u1', 10)
+    } catch (error) {
+      expect(error instanceof NotFoundError).toBeTruthy()
+    }
+  })
+
+  test('username not found', async function() {
+
+    try {
+      await User.applyJob('u10', 1)
+    } catch (error) {
+      expect(error instanceof NotFoundError).toBeTruthy()
+    }
+  })
+})
